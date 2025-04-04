@@ -75,6 +75,7 @@ class BuildExt(build_ext):
             opts.append("-DCRCPP_USE_CPP11")
             opts.append("-DCRCPP_BRANCHLESS")
             opts.append("-Wno-unused-variable")
+            opts.append("-include cstdint")
         elif ct == "msvc":
             opts.append(f'/DVERSION_INFO="{version}"')
             opts.append(rf'/DREVISION_ID="\"{revision_id}\""')

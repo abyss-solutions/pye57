@@ -14,8 +14,10 @@ from pye57.utils import convert_spherical_to_cartesian
 try:
     from exceptions import WindowsError
 except ImportError:
+
     class WindowsError(OSError):
         pass
+
 
 def get_attr_try(object, attribute, default):
     """wraps get_attr_try in try to avoid libe57 exception when attribute is missing"""
@@ -23,6 +25,7 @@ def get_attr_try(object, attribute, default):
         return getattr(object, attribute, default)
     except libe57.E57Exception:
         return default
+
 
 SUPPORTED_CARTESIAN_POINT_FIELDS = {
     "cartesianX": "d",
@@ -36,9 +39,11 @@ SUPPORTED_SPHERICAL_POINT_FIELDS = {
     "sphericalElevation": "d",
 }
 
+
 class COORDINATE_SYSTEMS(Enum):
     CARTESIAN = SUPPORTED_CARTESIAN_POINT_FIELDS
     SPHERICAL = SUPPORTED_SPHERICAL_POINT_FIELDS
+
 
 SUPPORTED_POINT_FIELDS = {
     **SUPPORTED_CARTESIAN_POINT_FIELDS,
@@ -102,11 +107,15 @@ class E57:
     def write_default_header(self):
         imf = self.image_file
         imf.extensionsAdd("", libe57.E57_V1_0_URI)
-        self.root.set("formatName", libe57.StringNode(imf, "ASTM E57 3D Imaging Data File"))
+        self.root.set(
+            "formatName", libe57.StringNode(imf, "ASTM E57 3D Imaging Data File")
+        )
         self.root.set("guid", libe57.StringNode(imf, "{%s}" % uuid.uuid4()))
         self.root.set("versionMajor", libe57.IntegerNode(imf, libe57.E57_FORMAT_MAJOR))
         self.root.set("versionMinor", libe57.IntegerNode(imf, libe57.E57_FORMAT_MINOR))
-        self.root.set("e57LibraryVersion", libe57.StringNode(imf, libe57.E57_LIBRARY_ID))
+        self.root.set(
+            "e57LibraryVersion", libe57.StringNode(imf, libe57.E57_LIBRARY_ID)
+        )
         self.root.set("coordinateMetadata", libe57.StringNode(imf, ""))
         creation_date_time = libe57.StructureNode(imf)
         creation_date_time.set("dateTimeValue", libe57.FloatNode(imf, 0.0))
@@ -120,19 +129,18 @@ class E57:
             raise ValueError("Unsupported point field: %s" % field_name)
 
         np_array = np.empty(capacity, SUPPORTED_POINT_FIELDS[field_name])
-        buffer = libe57.SourceDestBuffer(self.image_file,
-                                         field_name,
-                                         np_array,
-                                         capacity,
-                                         do_conversion,
-                                         do_scaling)
+        buffer = libe57.SourceDestBuffer(
+            self.image_file, field_name, np_array, capacity, do_conversion, do_scaling
+        )
         return np_array, buffer
 
     def make_buffers(self, field_names, capacity, do_conversion=True, do_scaling=True):
         data = {}
         buffers = libe57.VectorSourceDestBuffer()
         for field in field_names:
-            d, b = self.make_buffer(field, capacity, do_conversion=do_conversion, do_scaling=do_scaling)
+            d, b = self.make_buffer(
+                field, capacity, do_conversion=do_conversion, do_scaling=do_scaling
+            )
             data[field] = d
             buffers.append(b)
         return data, buffers
@@ -160,14 +168,16 @@ class E57:
         rotation_matrix = Quaternion(rotation).rotation_matrix
         return (np.dot(rotation_matrix, points.T) + translation.reshape(3, 1)).T
 
-    def read_scan(self,
-                  index,
-                  *,
-                  intensity=False,
-                  colors=False,
-                  row_column=False,
-                  transform=True,
-                  ignore_missing_fields=False) -> Dict:
+    def read_scan(
+        self,
+        index,
+        *,
+        intensity=False,
+        colors=False,
+        row_column=False,
+        transform=True,
+        ignore_missing_fields=False
+    ) -> Dict:
         header = self.get_header(index)
         n_points = header.point_count
 
@@ -175,7 +185,7 @@ class E57:
         if coordinate_system is COORDINATE_SYSTEMS.CARTESIAN:
             validState = "cartesianInvalidState"
             fields = list(SUPPORTED_CARTESIAN_POINT_FIELDS.keys())
-        elif coordinate_system is COORDINATE_SYSTEMS.SPHERICAL: 
+        elif coordinate_system is COORDINATE_SYSTEMS.SPHERICAL:
             validState = "sphericalInvalidState"
             fields = list(SUPPORTED_SPHERICAL_POINT_FIELDS.keys())
         if intensity:
@@ -194,8 +204,10 @@ class E57:
                 if ignore_missing_fields:
                     fields.remove(field)
                 else:
-                    raise ValueError("Requested to read a field (%s) with is absent from the e57 file. "
-                                     "Consider using 'ignore_missing_fields' to skip it." % field)
+                    raise ValueError(
+                        "Requested to read a field (%s) with is absent from the e57 file. "
+                        "Consider using 'ignore_missing_fields' to skip it." % field
+                    )
 
         data, buffers = self.make_buffers(fields, n_points)
         header.points.reader(buffers).read()
@@ -210,9 +222,17 @@ class E57:
 
         if transform:
             if coordinate_system is COORDINATE_SYSTEMS.CARTESIAN:
-                xyz = np.array([data["cartesianX"], data["cartesianY"], data["cartesianZ"]]).T
+                xyz = np.array(
+                    [data["cartesianX"], data["cartesianY"], data["cartesianZ"]]
+                ).T
             elif coordinate_system is COORDINATE_SYSTEMS.SPHERICAL:
-                rae = np.array([data["sphericalRange"], data["sphericalAzimuth"], data["sphericalElevation"]]).T
+                rae = np.array(
+                    [
+                        data["sphericalRange"],
+                        data["sphericalAzimuth"],
+                        data["sphericalElevation"],
+                    ]
+                ).T
                 # rae to xyz
                 xyz = convert_spherical_to_cartesian(rae)
             # translation to global coordinates
@@ -223,7 +243,15 @@ class E57:
             data["cartesianZ"] = xyz[:, 2]
         return data
 
-    def write_scan_raw(self, data: Dict, *, name=None, rotation=None, translation=None, scan_header=None):
+    def write_scan_raw(
+        self,
+        data: Dict,
+        *,
+        name=None,
+        rotation=None,
+        translation=None,
+        scan_header=None
+    ):
         for field in data.keys():
             if field not in SUPPORTED_POINT_FIELDS:
                 raise ValueError("Unsupported point field: %s" % field)
@@ -245,9 +273,16 @@ class E57:
         scan_node.set("guid", libe57.StringNode(self.image_file, "{%s}" % uuid.uuid4()))
         scan_node.set("name", libe57.StringNode(self.image_file, name))
         scan_node.set("temperature", libe57.FloatNode(self.image_file, temperature))
-        scan_node.set("relativeHumidity", libe57.FloatNode(self.image_file, relativeHumidity))
-        scan_node.set("atmosphericPressure", libe57.FloatNode(self.image_file, atmosphericPressure))
-        scan_node.set("description", libe57.StringNode(self.image_file, "pye57 v%s" % __version__))
+        scan_node.set(
+            "relativeHumidity", libe57.FloatNode(self.image_file, relativeHumidity)
+        )
+        scan_node.set(
+            "atmosphericPressure",
+            libe57.FloatNode(self.image_file, atmosphericPressure),
+        )
+        scan_node.set(
+            "description", libe57.StringNode(self.image_file, "pye57 v%s" % __version__)
+        )
 
         n_points = data["cartesianX"].shape[0]
 
@@ -271,8 +306,12 @@ class E57:
         scan_node.set("indexBounds", ibox)
 
         if "intensity" in data:
-            int_min = get_attr_try(scan_header, "intensityMinimum", np.min(data["intensity"]))
-            int_max = get_attr_try(scan_header, "intensityMaximum", np.max(data["intensity"]))
+            int_min = get_attr_try(
+                scan_header, "intensityMinimum", np.min(data["intensity"])
+            )
+            int_max = get_attr_try(
+                scan_header, "intensityMaximum", np.max(data["intensity"])
+            )
             intbox = libe57.StructureNode(self.image_file)
             intbox.set("intensityMinimum", libe57.FloatNode(self.image_file, int_min))
             intbox.set("intensityMaximum", libe57.FloatNode(self.image_file, int_max))
@@ -300,11 +339,19 @@ class E57:
         del valid, x, y, z
 
         if scan_header is not None:
-            bb_min_scaled = np.array([scan_header.xMinimum, scan_header.yMinimum, scan_header.zMinimum])
-            bb_max_scaled = np.array([scan_header.xMaximum, scan_header.yMaximum, scan_header.zMaximum])
+            bb_min_scaled = np.array(
+                [scan_header.xMinimum, scan_header.yMinimum, scan_header.zMinimum]
+            )
+            bb_max_scaled = np.array(
+                [scan_header.xMaximum, scan_header.yMaximum, scan_header.zMaximum]
+            )
         else:
-            bb_min_scaled = self.to_global(bb_min.reshape(-1, 3), rotation, translation)[0]
-            bb_max_scaled = self.to_global(bb_max.reshape(-1, 3), rotation, translation)[0]
+            bb_min_scaled = self.to_global(
+                bb_min.reshape(-1, 3), rotation, translation
+            )[0]
+            bb_max_scaled = self.to_global(
+                bb_max.reshape(-1, 3), rotation, translation
+            )[0]
 
         bbox_node.set("xMinimum", libe57.FloatNode(self.image_file, bb_min_scaled[0]))
         bbox_node.set("xMaximum", libe57.FloatNode(self.image_file, bb_max_scaled[0]))
@@ -330,17 +377,29 @@ class E57:
             pose_node.set("translation", translation_node)
 
         start_datetime = get_attr_try(scan_header, "acquisitionStart_dateTimeValue", 0)
-        start_atomic = get_attr_try(scan_header, "acquisitionStart_isAtomicClockReferenced", False)
+        start_atomic = get_attr_try(
+            scan_header, "acquisitionStart_isAtomicClockReferenced", False
+        )
         end_datetime = get_attr_try(scan_header, "acquisitionEnd_dateTimeValue", 0)
-        end_atomic = get_attr_try(scan_header, "acquisitionEnd_isAtomicClockReferenced", False)
+        end_atomic = get_attr_try(
+            scan_header, "acquisitionEnd_isAtomicClockReferenced", False
+        )
         acquisition_start = libe57.StructureNode(self.image_file)
         scan_node.set("acquisitionStart", acquisition_start)
-        acquisition_start.set("dateTimeValue", libe57.FloatNode(self.image_file, start_datetime))
-        acquisition_start.set("isAtomicClockReferenced", libe57.IntegerNode(self.image_file, start_atomic))
+        acquisition_start.set(
+            "dateTimeValue", libe57.FloatNode(self.image_file, start_datetime)
+        )
+        acquisition_start.set(
+            "isAtomicClockReferenced", libe57.IntegerNode(self.image_file, start_atomic)
+        )
         acquisition_end = libe57.StructureNode(self.image_file)
         scan_node.set("acquisitionEnd", acquisition_end)
-        acquisition_end.set("dateTimeValue", libe57.FloatNode(self.image_file, end_datetime))
-        acquisition_end.set("isAtomicClockReferenced", libe57.IntegerNode(self.image_file, end_atomic))
+        acquisition_end.set(
+            "dateTimeValue", libe57.FloatNode(self.image_file, end_datetime)
+        )
+        acquisition_end.set(
+            "isAtomicClockReferenced", libe57.IntegerNode(self.image_file, end_atomic)
+        )
 
         # todo: pointGroupingSchemes
 
@@ -353,9 +412,15 @@ class E57:
 
         chunk_size = 5000000
 
-        x_node = libe57.FloatNode(self.image_file, center[0], precision, bb_min[0], bb_max[0])
-        y_node = libe57.FloatNode(self.image_file, center[1], precision, bb_min[1], bb_max[1])
-        z_node = libe57.FloatNode(self.image_file, center[2], precision, bb_min[2], bb_max[2])
+        x_node = libe57.FloatNode(
+            self.image_file, center[0], precision, bb_min[0], bb_max[0]
+        )
+        y_node = libe57.FloatNode(
+            self.image_file, center[1], precision, bb_min[1], bb_max[1]
+        )
+        z_node = libe57.FloatNode(
+            self.image_file, center[2], precision, bb_min[2], bb_max[2]
+        )
         points_prototype.set("cartesianX", x_node)
         points_prototype.set("cartesianY", y_node)
         points_prototype.set("cartesianZ", z_node)
@@ -365,14 +430,22 @@ class E57:
         if "intensity" in data:
             intensity_min = np.min(data["intensity"])
             intensity_max = np.max(data["intensity"])
-            intensity_node = libe57.FloatNode(self.image_file, intensity_min, precision, intensity_min, intensity_max)
+            intensity_node = libe57.FloatNode(
+                self.image_file, intensity_min, precision, intensity_min, intensity_max
+            )
             points_prototype.set("intensity", intensity_node)
             field_names.append("intensity")
 
         if all(color in data for color in ["colorRed", "colorGreen", "colorBlue"]):
-            points_prototype.set("colorRed", libe57.IntegerNode(self.image_file, 0, 0, 255))
-            points_prototype.set("colorGreen", libe57.IntegerNode(self.image_file, 0, 0, 255))
-            points_prototype.set("colorBlue", libe57.IntegerNode(self.image_file, 0, 0, 255))
+            points_prototype.set(
+                "colorRed", libe57.IntegerNode(self.image_file, 0, 0, 255)
+            )
+            points_prototype.set(
+                "colorGreen", libe57.IntegerNode(self.image_file, 0, 0, 255)
+            )
+            points_prototype.set(
+                "colorBlue", libe57.IntegerNode(self.image_file, 0, 0, 255)
+            )
             field_names.append("colorRed")
             field_names.append("colorGreen")
             field_names.append("colorBlue")
@@ -382,15 +455,24 @@ class E57:
             max_row = np.max(data["rowIndex"])
             min_col = np.min(data["columnIndex"])
             max_col = np.max(data["columnIndex"])
-            points_prototype.set("rowIndex", libe57.IntegerNode(self.image_file, min_row, min_row, max_row))
+            points_prototype.set(
+                "rowIndex",
+                libe57.IntegerNode(self.image_file, min_row, min_row, max_row),
+            )
             field_names.append("rowIndex")
-            points_prototype.set("columnIndex", libe57.IntegerNode(self.image_file, min_col, min_col, max_col))
+            points_prototype.set(
+                "columnIndex",
+                libe57.IntegerNode(self.image_file, min_col, min_col, max_col),
+            )
             field_names.append("columnIndex")
 
         if "cartesianInvalidState" in data:
             min_state = np.min(data["cartesianInvalidState"])
             max_state = np.max(data["cartesianInvalidState"])
-            points_prototype.set("cartesianInvalidState", libe57.IntegerNode(self.image_file, 0, min_state, max_state))
+            points_prototype.set(
+                "cartesianInvalidState",
+                libe57.IntegerNode(self.image_file, 0, min_state, max_state),
+            )
             field_names.append("cartesianInvalidState")
 
         # other fields
@@ -419,7 +501,9 @@ class E57:
 
             for type_ in SUPPORTED_POINT_FIELDS:
                 if type_ in arrays:
-                    arrays[type_][:current_chunk] = data[type_][current_index:current_index + current_chunk]
+                    arrays[type_][:current_chunk] = data[type_][
+                        current_index : current_index + current_chunk
+                    ]
 
             writer.write(current_chunk)
 

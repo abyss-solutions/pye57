@@ -68,7 +68,7 @@ def gen_args_names(params: List):
 
 
 def gen_constructor(class_name, method: CppMethod):
-    string = 'cls_{class_name}.def(py::init<{args_types}>(){args_names});'
+    string = "cls_{class_name}.def(py::init<{args_types}>(){args_names});"
     args_names = gen_args_names(method["parameters"])
     formatted = string.format(
         class_name=class_name,
@@ -109,7 +109,9 @@ def gen_enums(enums: List[CppEnum]):
     for e in enums:
         enum_lines = ['py::enum_<{name}>(m, "{name}")']
         for value in e["values"]:
-            enum_lines.append('    .value("%s", {name}::%s)' % (value["name"], value["name"]))
+            enum_lines.append(
+                '    .value("%s", {name}::%s)' % (value["name"], value["name"])
+            )
         enum_lines.append("    .export_values();")
         for line in enum_lines:
             out.append(line.format(name=e["name"]))
@@ -130,22 +132,23 @@ def main(path):
     print(generate_lines(variables + enums + classes, base_indent))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     path = "../libE57Format/include/E57Format.h"
-    class_order = ["Node",
-                   "StructureNode",
-                   "VectorNode",
-                   "SourceDestBuffer",
-                   "CompressedVectorNode",
-                   "CompressedVectorReader",
-                   "CompressedVectorWriter",
-                   "IntegerNode",
-                   "ScaledIntegerNode",
-                   "FloatNode",
-                   "StringNode",
-                   "BlobNode",
-                   "ImageFile",
-                   "E57Exception",
-                   "E57Utilities",
-                   ]
+    class_order = [
+        "Node",
+        "StructureNode",
+        "VectorNode",
+        "SourceDestBuffer",
+        "CompressedVectorNode",
+        "CompressedVectorReader",
+        "CompressedVectorWriter",
+        "IntegerNode",
+        "ScaledIntegerNode",
+        "FloatNode",
+        "StringNode",
+        "BlobNode",
+        "ImageFile",
+        "E57Exception",
+        "E57Utilities",
+    ]
     main(path)

@@ -11,6 +11,7 @@ from pye57.utils import get_fields
 try:
     from exceptions import WindowsError
 except ImportError:
+
     class WindowsError(OSError):
         pass
 
@@ -38,9 +39,11 @@ def delete_retry(path):
 def e57_path():
     return test_data("test.e57")
 
+
 @pytest.fixture
 def e57_spherical_path():
     return test_data("testSpherical.e57")
+
 
 @pytest.fixture
 def temp_e57_write(request):
@@ -103,8 +106,17 @@ def test_get_structure_names(e57_path):
     names = []
     for id_ in range(root.childCount()):
         names.append(root.get(id_).pathName())
-    assert names == ['/formatName', '/guid', '/versionMajor', '/versionMinor', '/e57LibraryVersion',
-                     '/coordinateMetadata', '/creationDateTime', '/data3D', '/images2D']
+    assert names == [
+        "/formatName",
+        "/guid",
+        "/versionMajor",
+        "/versionMinor",
+        "/e57LibraryVersion",
+        "/coordinateMetadata",
+        "/creationDateTime",
+        "/data3D",
+        "/images2D",
+    ]
 
 
 def test_get_data3d_nodes(e57_path):
@@ -136,7 +148,11 @@ def test_source_dest_buffers(e57_path):
         sdb = libe57.SourceDestBuffer(f, "something", data, capacity, True, True)
         buffers.append(sdb)
 
-    for t, sdb, size, in zip(types, buffers, sizes):
+    for (
+        t,
+        sdb,
+        size,
+    ) in zip(types, buffers, sizes):
         assert sdb.pathName() == "something"
         assert sdb.capacity() == capacity
         assert sdb.stride() == size
@@ -147,8 +163,7 @@ def test_source_dest_buffers(e57_path):
 def test_unsupported_point_field(temp_e57_write):
     with pye57.E57(temp_e57_write, mode="w") as f:
         with pytest.raises(ValueError):
-            data = {"cartesianX": np.random.rand(10),
-                    "bananas": np.random.rand(10)}
+            data = {"cartesianX": np.random.rand(10), "bananas": np.random.rand(10)}
             f.write_scan_raw(data)
 
 
@@ -189,13 +204,19 @@ def test_read_header(e57_path):
     f = libe57.ImageFile(e57_path, "r")
     data3d = f.root()["data3D"]
     headers = pye57.ScanHeader.from_data3d(data3d)
-    fields = ['cartesianX', 'cartesianY', 'cartesianZ', 'intensity', 'rowIndex', 'columnIndex', 'cartesianInvalidState']
+    fields = [
+        "cartesianX",
+        "cartesianY",
+        "cartesianZ",
+        "intensity",
+        "rowIndex",
+        "columnIndex",
+        "cartesianInvalidState",
+    ]
     for header in headers:
         assert fields == header.point_fields
     assert headers[0].pretty_print()
-    scan_0_rot = [[-0.4443, 0.8958, 0.],
-                  [-0.8958, -0.4443, 0.],
-                  [0., 0., 1.]]
+    scan_0_rot = [[-0.4443, 0.8958, 0.0], [-0.8958, -0.4443, 0.0], [0.0, 0.0, 1.0]]
     assert np.allclose(scan_0_rot, headers[0].rotation_matrix, atol=1e-3)
     scan_0_tra = [301336.23199, 5042597.23676, 15.46649]
     assert np.allclose(scan_0_tra, headers[0].translation)
@@ -211,7 +232,16 @@ def test_read_header_spherical(e57_spherical_path):
     f = libe57.ImageFile(e57_spherical_path, "r")
     data3d = f.root()["data3D"]
     headers = pye57.ScanHeader.from_data3d(data3d)
-    fields = ['sphericalRange', 'sphericalAzimuth', 'sphericalElevation', 'intensity', 'colorRed', 'colorGreen', 'colorBlue', 'sphericalInvalidState']
+    fields = [
+        "sphericalRange",
+        "sphericalAzimuth",
+        "sphericalElevation",
+        "intensity",
+        "colorRed",
+        "colorGreen",
+        "colorBlue",
+        "sphericalInvalidState",
+    ]
     for header in headers:
         assert fields == header.point_fields
     assert headers[0].pretty_print()
@@ -221,7 +251,7 @@ def test_read_xyz_spherical(e57_spherical_path):
     e57 = pye57.E57(e57_spherical_path)
     xyz = e57.read_scan(0)
     assert np.any(xyz)
-    
+
 
 def test_read_raw(e57_path):
     e57 = pye57.E57(e57_path)
@@ -238,7 +268,11 @@ def test_read_write_single_scan(e57_path, temp_e57_write):
     header_source = e57.get_header(0)
     with pye57.E57(temp_e57_write, mode="w") as e57_write:
         raw_data_0 = e57.read_scan_raw(0)
-        e57_write.write_scan_raw(raw_data_0, rotation=header_source.rotation, translation=header_source.translation)
+        e57_write.write_scan_raw(
+            raw_data_0,
+            rotation=header_source.rotation,
+            translation=header_source.translation,
+        )
     scan_0 = pye57.E57(e57_path).read_scan_raw(0)
     written = pye57.E57(temp_e57_write)
     header = written.get_header(0)
@@ -266,7 +300,9 @@ def test_copy_file(e57_path, temp_e57_write):
             assert header_written.guid
             assert header_written.temperature == header_written.temperature
             assert header_written.relativeHumidity == header_written.relativeHumidity
-            assert header_written.atmosphericPressure == header_written.atmosphericPressure
+            assert (
+                header_written.atmosphericPressure == header_written.atmosphericPressure
+            )
             assert header_written.rowMinimum == header.rowMinimum
             assert header_written.rowMaximum == header.rowMaximum
             assert header_written.columnMinimum == header.columnMinimum
@@ -283,10 +319,22 @@ def test_copy_file(e57_path, temp_e57_write):
             assert header_written.zMaximum == header.zMaximum
             assert np.allclose(header_written.rotation, header.rotation)
             assert np.allclose(header_written.translation, header.translation)
-            assert header_written.acquisitionStart_dateTimeValue == header.acquisitionStart_dateTimeValue
-            assert header_written.acquisitionStart_isAtomicClockReferenced == header.acquisitionStart_isAtomicClockReferenced
-            assert header_written.acquisitionEnd_dateTimeValue == header.acquisitionEnd_dateTimeValue
-            assert header_written.acquisitionEnd_isAtomicClockReferenced == header.acquisitionEnd_isAtomicClockReferenced
+            assert (
+                header_written.acquisitionStart_dateTimeValue
+                == header.acquisitionStart_dateTimeValue
+            )
+            assert (
+                header_written.acquisitionStart_isAtomicClockReferenced
+                == header.acquisitionStart_isAtomicClockReferenced
+            )
+            assert (
+                header_written.acquisitionEnd_dateTimeValue
+                == header.acquisitionEnd_dateTimeValue
+            )
+            assert (
+                header_written.acquisitionEnd_isAtomicClockReferenced
+                == header.acquisitionEnd_isAtomicClockReferenced
+            )
             # todo: point groups
             # header.pointGroupingSchemes["groupingByLine"]["idElementName"].value()
             # header.pointGroupingSchemes["groupingByLine"]["groups"]
@@ -302,4 +350,6 @@ def test_read_color_absent(e57_path):
 
 def test_scan_position(e57_path):
     e57 = pye57.E57(e57_path)
-    assert np.allclose(e57.scan_position(3), np.array([[3.01323456e+05, 5.04260184e+06, 1.56040279e+01]]))
+    assert np.allclose(
+        e57.scan_position(3), np.array([[3.01323456e05, 5.04260184e06, 1.56040279e01]])
+    )

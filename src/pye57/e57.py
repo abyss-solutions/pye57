@@ -18,6 +18,12 @@ except ImportError:
     class WindowsError(OSError):
         pass
 
+def get_attr_try(object, attribute, default):
+    """wraps get_attr_try in try to avoid libe57 exception when attribute is missing"""
+    try:
+        return getattr(object, attribute, default)
+    except libe57.E57Exception:
+        return default
 
 def get_attr_try(object, attribute, default):
     """wraps get_attr_try in try to avoid libe57 exception when attribute is missing"""
@@ -309,12 +315,8 @@ class E57:
         scan_node.set("indexBounds", ibox)
 
         if "intensity" in data:
-            int_min = get_attr_try(
-                scan_header, "intensityMinimum", np.min(data["intensity"])
-            )
-            int_max = get_attr_try(
-                scan_header, "intensityMaximum", np.max(data["intensity"])
-            )
+            int_min = get_attr_try(scan_header, "intensityMinimum", np.min(data["intensity"]))
+            int_max = get_attr_try(scan_header, "intensityMaximum", np.max(data["intensity"]))
             intbox = libe57.StructureNode(self.image_file)
             intbox.set("intensityMinimum", libe57.FloatNode(self.image_file, int_min))
             intbox.set("intensityMaximum", libe57.FloatNode(self.image_file, int_max))
@@ -380,13 +382,10 @@ class E57:
             pose_node.set("translation", translation_node)
 
         start_datetime = get_attr_try(scan_header, "acquisitionStart_dateTimeValue", 0)
-        start_atomic = get_attr_try(
-            scan_header, "acquisitionStart_isAtomicClockReferenced", False
-        )
+
+        start_atomic = get_attr_try(scan_header, "acquisitionStart_isAtomicClockReferenced", False)
         end_datetime = get_attr_try(scan_header, "acquisitionEnd_dateTimeValue", 0)
-        end_atomic = get_attr_try(
-            scan_header, "acquisitionEnd_isAtomicClockReferenced", False
-        )
+        end_atomic = get_attr_try(scan_header, "acquisitionEnd_isAtomicClockReferenced", False)
         acquisition_start = libe57.StructureNode(self.image_file)
         scan_node.set("acquisitionStart", acquisition_start)
         acquisition_start.set(
@@ -458,15 +457,10 @@ class E57:
             max_row = np.max(data["rowIndex"])
             min_col = np.min(data["columnIndex"])
             max_col = np.max(data["columnIndex"])
-            points_prototype.set(
-                "rowIndex",
-                libe57.IntegerNode(self.image_file, min_row, min_row, max_row),
-            )
+
+            points_prototype.set("rowIndex", libe57.IntegerNode(self.image_file, min_row, min_row, max_row))
             field_names.append("rowIndex")
-            points_prototype.set(
-                "columnIndex",
-                libe57.IntegerNode(self.image_file, min_col, min_col, max_col),
-            )
+            points_prototype.set("columnIndex", libe57.IntegerNode(self.image_file, min_col, min_col, max_col))
             field_names.append("columnIndex")
 
         if "cartesianInvalidState" in data:

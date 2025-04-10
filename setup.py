@@ -25,6 +25,7 @@ include_dirs = [
     "libE57Format/extern/CRCpp/inc",
 ]
 package_data = []
+extra_link_args = []
 
 if platform.system() == "Windows":
     libraries.append("xerces-c_3")
@@ -43,7 +44,20 @@ if platform.system() == "Windows":
         # include xerces-c dll in the package
         shutil.copy2(xerces_dir / "bin" / "xerces-c_3_2.dll", HERE / "src" / "pye57")
         package_data.append("xerces-c_3_2.dll")
-
+elif platform.system() == "Darwin":
+    xerces_dir = Path("/usr/local/")
+    if xerces_dir.exists():
+        # include xerces-c dylib in the package
+        shutil.copy2(xerces_dir / "lib" / "libxerces-c-3.2.dylib", HERE / "src" / "pye57")
+        library_dirs.append(str(xerces_dir / "lib"))
+        include_dirs.append(str(xerces_dir / "include"))
+        package_data.append("libxerces-c-3.2.dylib")
+    libraries.append("xerces-c")
+    extra_link_args = [
+        f"-Wl,-rpath,@loader_path",
+        f"-L{str(HERE / 'src' / 'pye57')}",
+        "-lxerces-c",
+    ]
 else:
     libraries.append("xerces-c")
 
@@ -56,6 +70,7 @@ ext_modules = [
         libraries=libraries,
         library_dirs=library_dirs,
         language="c++",
+        extra_link_args=extra_link_args,
     ),
 ]
 
@@ -116,13 +131,14 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Programming Language :: Python",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
         "Programming Language :: Python :: Implementation :: CPython",
     ],
     cmdclass={"build_ext": BuildExt},
     zip_safe=False,
-    python_requires=">=3.7",
+    python_requires=">=3.8",
 )

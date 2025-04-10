@@ -268,6 +268,7 @@ class E57:
         temperature = get_attr_try(scan_header, "temperature", 0)
         relativeHumidity = get_attr_try(scan_header, "relativeHumidity", 0)
         atmosphericPressure = get_attr_try(scan_header, "atmosphericPressure", 0)
+        description = get_attr_try(scan_header, "description", "")
 
         scan_node = libe57.StructureNode(self.image_file)
         scan_node.set("guid", libe57.StringNode(self.image_file, "{%s}" % uuid.uuid4()))
@@ -280,8 +281,10 @@ class E57:
             "atmosphericPressure",
             libe57.FloatNode(self.image_file, atmosphericPressure),
         )
+        if description == "":
+            description = "pye57 v%s" % __version__
         scan_node.set(
-            "description", libe57.StringNode(self.image_file, "pye57 v%s" % __version__)
+            "description", libe57.StringNode(self.image_file, description)
         )
 
         n_points = data["cartesianX"].shape[0]

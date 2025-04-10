@@ -70,6 +70,14 @@ class ScanHeader:
         return self["guid"].value()
 
     @property
+    def name(self):
+        return self["name"].value()
+
+    @property
+    def description(self):
+        return self["description"].value()
+
+    @property
     def temperature(self):
         return self["temperature"].value()
 
